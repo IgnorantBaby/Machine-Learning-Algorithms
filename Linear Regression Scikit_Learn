@@ -1,0 +1,39 @@
+#Python code
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+
+# Reading CSV Data file
+data = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/1.01. Simple linear regression.csv')
+
+# Defining Independent and Dependent Variables
+y = data['GPA']
+x = data['SAT']
+
+# reshape if there is only ONE feature
+X = x.values.reshape(-1,1)
+
+# Regression itself
+reg = LinearRegression()
+reg.fit(X, y)
+
+# R-square, coefficients, intercepts 
+Rsquare = reg.score(X, y)
+Coefficients = reg.coef_
+Intercepts = reg.intercept_
+
+# Predictions
+new_data = pd.DataFrame([1740,1670], columns = ['SAT'])
+Predictions = reg.predict(new_data)
+new_data['Predicted_Data'] = Predictions
+
+# plotting Regression Line
+plt.scatter(x,y)
+yhat = Intercepts + Coefficients*X
+fig = plt.plot(x, yhat, lw=2, c='brown', label ='Regression_Line')
+plt.xlabel('SAT', fontsize=20)
+plt.ylabel('GPA', fontsize=20)
+plt.show()
