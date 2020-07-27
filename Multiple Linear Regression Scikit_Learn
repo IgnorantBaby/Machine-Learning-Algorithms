@@ -1,0 +1,71 @@
+#Python code
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.linear_model import LinearRegression
+
+# Reading CSV Data file
+data = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/1.02. Multiple linear regression.csv')
+
+# Defining Independent and Dependent Variables
+y = data['GPA']
+X = data[['SAT', 'Rand 1,2,3']]
+
+# Regression itself
+reg = LinearRegression()
+reg.fit(X, y)
+
+# R-square, coefficients, intercepts, adjusted R-Squared
+Rsquare = reg.score(X, y)
+Coefficients = reg.coef_
+Intercepts = reg.intercept_
+
+# Adjusted R-Squared
+n = X.shape[0]
+p = X.shape[1]
+adjusted_r2 = 1-(1-Rsquare)*(n-1)/(n-p-1)
+
+# Feature selection *which variable is good for prediction (F-Statistics, p_value)
+from sklearn.feature_selection import f_regression
+F_reg = f_regression(X, y)
+
+# Summary Table
+reg_summary = pd.DataFrame(X.columns.values, columns = ['Features']) 
+reg_summary['Coefficients'] = Coefficients
+reg_summary['P_values'] = F_reg[1].round(3)
+reg_summary['F-Statistics'] = F_reg[0].round(3)
+
+# Standardization/Feature scaling of Inputs/Features
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+scaler.fit(X)
+X_scaled = scaler.transform(X)
+
+# Regression with Scaled Features
+reg = LinearRegression()
+reg.fit(X_scaled, y)
+
+# R-square, coefficients, intercepts, adjusted R-Squared
+nRsquare = reg.score(X_scaled, y)
+nCoefficients = reg.coef_
+nIntercepts = reg.intercept_
+
+# Adjusted R-Squared
+n = X_scaled.shape[0]
+p = X_scaled.shape[1]
+nadjusted_r2 = 1-(1-nRsquare)*(n-1)/(n-p-1)
+
+# Feature selection *which variable is good for prediction (F-Statistics, p_value)
+from sklearn.feature_selection import f_regression
+nF_reg = f_regression(X_scaled, y)
+
+# Summary Table
+nreg_summary = pd.DataFrame([['Bias'],['SAT'],['Rand 1, 2, 3']], columns = ['Features']) 
+nreg_summary['Weights'] = nIntercepts, nCoefficients[0], nCoefficients[1]
+
+# Making Predictions
+new_data = pd.DataFrame([[1700,1],[1800,0]], columns = ['SAT', 'Rand 1, 2, 3'])
+new_data_scaled = scaler.transform(new_data)
+nPredict = reg.predict(new_data_scaled)
