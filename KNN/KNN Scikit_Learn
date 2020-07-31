@@ -1,0 +1,61 @@
+#Python code
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+train = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/KNN/Classified Data.csv')
+
+# data Analysis and PreProcessing
+
+# check for null values using heatmap
+sns.heatmap(train.isnull(), yticklabels=False, cbar=False, cmap='viridis')
+
+# droping uneccessory columns
+train.drop('Unnamed: 0', axis=1, inplace=True)
+
+# analysing data
+sns.pairplot(train, hue='TARGET CLASS')
+
+# Feature Scaling
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+scaler.fit(train.drop('TARGET CLASS', axis=1))
+scaled_features = scaler.transform(train.drop('TARGET CLASS', axis=1))
+df_scaled_features = pd.DataFrame(scaled_features, columns=train.drop('TARGET CLASS', axis=1).columns)
+
+# Spliting data into train test
+X= df_scaled_features
+y= train['TARGET CLASS']
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=101)
+
+# KNN
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier()
+knn.fit(X_train, y_train)
+
+# KNN Prediction
+Predictions = knn.predict(X_test)
+
+# KNN test report
+from sklearn.metrics import classification_report, confusion_matrix
+print(confusion_matrix(y_test, Predictions))
+print(classification_report(y_test, Predictions))
+
+# Checking for best K values
+error_rate= []
+for i in range(1,40):
+    knn = KNeighborsClassifier(n_neighbors=i)
+    knn.fit(X_train, y_train)
+    predict_i = knn.predict(X_test)
+    error_rate.append(np.mean(predict_i != y_test))
+    
+# plotting error rate
+plt.plot(range(1,40),error_rate)    
+
+
+
+
