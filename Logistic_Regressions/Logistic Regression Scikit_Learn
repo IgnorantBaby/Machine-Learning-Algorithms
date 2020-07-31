@@ -1,0 +1,70 @@
+#Python code
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+train = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/Logistic regression/train.csv')
+
+# data Analysis and PreProcessing
+
+# check for null values using heatmap
+sns.heatmap(train.isnull(), yticklabels=False, cbar=False, cmap='viridis')
+
+# check ratios
+sns.set_style('whitegrid')
+sns.countplot(x='Survived', data = train, hue='Sex')
+sns.countplot(x='Survived', data = train, hue='Pclass')
+sns.distplot(train['Age'].dropna(), kde=False)
+sns.countplot(train['SibSp'], data=train)
+train['Fare'].hist(bins=100)
+
+# Cleaning Data and dealing with missing values
+sns.boxplot(x='Pclass', y='Age', data=train)
+
+def impute_age(col):
+    age = col[0]
+    pClass = col[1]
+    if pd.isnull(age):
+        if pClass == 1:
+            return 37
+        elif pClass == 2:
+            return 29
+        else:
+            return 24
+    else:
+        return age
+    
+train['Age'] = train[['Age','Pclass']].apply(impute_age,axis=1)
+sns.heatmap(train.isnull(), yticklabels=False, cbar=False, cmap='viridis')
+
+train.drop('Cabin', axis=1, inplace=True)
+train.dropna(inplace=True)
+
+# creating dummy variables for categorical data
+dummy = pd.get_dummies(train[['Embarked','Sex']],drop_first=True)
+train = pd.concat([train, dummy],axis=1)
+train.drop(['Embarked','Sex','Name','Ticket','PassengerId'], axis=1, inplace=True)
+
+# Splitting the data Train, Test, Split
+X = train.drop('Survived', axis=1)
+y = train['Survived']
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 101)
+
+# Logistic Regression
+from sklearn.linear_model import LogisticRegression
+logmodel = LogisticRegression()
+logmodel.fit(X_train, y_train)
+
+# Predicting the result
+Predictions = logmodel.predict(X_test) 
+from sklearn.metrics import classification_report
+print(classification_report(y_test, Predictions))
+
+from sklearn.metrics import confusion_matrix
+confusion_matrix(y_test, Predictions)
+
