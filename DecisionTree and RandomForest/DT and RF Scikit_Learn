@@ -1,0 +1,69 @@
+#Python code
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+train = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/Decision Trees and Random Forest/loan_data.csv')
+
+# data Analysis and PreProcessing
+train.info()
+train['purpose'].unique()
+train[train['credit.policy']==1]['fico'].hist(bins=30)
+train[train['credit.policy']==0]['fico'].hist(bins=30)
+train['credit.policy'].value_counts()
+train['purpose'].value_counts()
+plt.figure(figsize=(15,7))
+sns.countplot(x='purpose', hue='not.fully.paid', data=train)
+sns.jointplot('fico', 'int.rate', data=train)
+sns.lmplot('fico', 'int.rate', data=train, hue='credit.policy', col='not.fully.paid')
+
+# creating dummy variables for categorical data
+cat_feat = ['purpose']
+final_data = pd.get_dummies(train,columns=cat_feat, drop_first=True)
+
+# Spliting data into train test
+X = final_data.drop('not.fully.paid', axis=1)
+y= final_data['not.fully.paid']
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=101)
+
+# Decision Tree Classifier
+from sklearn.tree import DecisionTreeClassifier
+dtree = DecisionTreeClassifier()
+dtree.fit(X_train,y_train)
+
+# DT Predictions
+Predictions = dtree.predict(X_test)
+
+# DT evaluation
+from sklearn.metrics import classification_report, confusion_matrix
+print(classification_report(y_test, Predictions))
+print(confusion_matrix(y_test, Predictions))
+
+# Random Forest
+from sklearn.ensemble import RandomForestClassifier
+randf = RandomForestClassifier(n_estimators=300)
+randf.fit(X_train, y_train)
+
+# RF Predictions
+PredictionsRF = randf.predict(X_test)
+
+# RF evaluation
+from sklearn.metrics import classification_report, confusion_matrix
+print(classification_report(y_test, PredictionsRF))
+print(confusion_matrix(y_test, PredictionsRF))
+
+# Checking for best K values
+error_rate= []
+for i in range(50,400,50):
+    RF = RandomForestClassifier(n_estimators=i)
+    randf.fit(X_train, y_train)
+    predict_i = randf.predict(X_test)
+    error_rate.append(np.mean(predict_i != y_test))
+
+# plotting error rate
+plt.plot(range(50,400,50),error_rate)
