@@ -1,0 +1,60 @@
+#Python code
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+train = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/KMeans Clustering/College_Data.csv', index_col = 0)
+
+# Data Visualization
+sns.pairplot(train)
+sns.jointplot(train['Apps'], train['Accept'])
+sns.lmplot('Apps', 'Accept',train, hue = 'Private')
+sns.lmplot('PhD', 'Accept',train, hue = 'Private')
+sns.lmplot('Room.Board', 'Grad.Rate',train, hue = 'Private')
+sns.lmplot('F.Undergrad', 'Outstate',train, hue = 'Private')
+g = sns.FacetGrid(train, hue='Private')
+g = g.map(plt.hist,'Outstate', bins =20, alpha=0.7)
+
+g = sns.FacetGrid(train, hue='Private')
+g = g.map(plt.hist,'Grad.Rate', bins =20, alpha=0.7)
+
+# reassigning correct values
+train[train['Grad.Rate']>100]
+train['Grad.Rate']['Cazenovia College']=100
+
+# KMeans Clustering
+from sklearn.cluster import KMeans
+KMeansClustering = KMeans(n_clusters=2)
+KMeansClustering.fit(train.drop('Private',axis=1))
+KMeansClustering.cluster_centers_
+KMeansClustering.labels_
+
+# checking the KMeans cluster If we have labels
+def converter(private):
+    if private == 'Yes':
+        return 0
+    else:
+        return 1
+train['cluster'] = train['Private'].apply(converter)
+
+from sklearn.metrics import classification_report, confusion_matrix
+print(classification_report(train['cluster'], KMeansClustering.labels_))
+print(confusion_matrix(train['cluster'], KMeansClustering.labels_))
+
+# Data Visualization after clustering
+sns.pairplot(train)
+sns.jointplot(train['Apps'], train['Accept'])
+sns.lmplot('Apps', 'Accept',train, hue = 'cluster')
+sns.lmplot('PhD', 'Accept',train, hue = 'cluster')
+sns.lmplot('Room.Board', 'Grad.Rate',train, hue = 'cluster')
+sns.lmplot('F.Undergrad', 'Outstate',train, hue = 'cluster')
+g = sns.FacetGrid(train, hue='cluster')
+g = g.map(plt.hist,'Outstate', bins =20, alpha=0.7)
+
+g = sns.FacetGrid(train, hue='cluster')
+g = g.map(plt.hist,'Grad.Rate', bins =20, alpha=0.7)
+
