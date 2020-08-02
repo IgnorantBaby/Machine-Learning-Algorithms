@@ -1,0 +1,47 @@
+#Python code
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# load iris dataset
+iris = sns.load_dataset('iris')
+
+# data analysis
+sns.pairplot(iris,hue='species')
+
+# Spliting dataset
+X = iris.drop('species',axis=1)
+y = iris['species']
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3)
+
+# Support Vector Classifier
+from sklearn.svm import SVC
+svc_model = SVC()
+svc_model.fit(X_train,y_train)
+
+# SVC predict
+predictions = svc_model.predict(X_test)
+
+# Evaluate model
+from sklearn.metrics import confusion_matrix, classification_report
+print(classification_report(y_test, predictions))
+print(confusion_matrix(y_test, predictions))
+
+# GridSearchCV hyperparameter tuning
+from sklearn.model_selection import GridSearchCV
+param_grid={'C': [0.1, 1, 10, 100], 'gamma': [1, 0.1, 0.01, 0.001]}
+grid = GridSearchCV(SVC(), param_grid, verbose=2)
+grid.fit(X_train, y_train)
+
+# GridSearchCV predict
+grid_predict = grid.predict(X_test)
+
+# Evaluate model
+print(classification_report(y_test, grid_predict))
+print(confusion_matrix(y_test, grid_predict))
+
