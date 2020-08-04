@@ -1,0 +1,70 @@
+#Python code
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+train = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/ANN/fake_reg.csv')
+
+# defining input(X) and ouput(y)
+X = train[['feature1', 'feature2']].values
+y = train['price'].values
+
+# Splitting train test data
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Standardizing Inputs
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+scaler.fit(X_train)
+scaled_X_train = scaler.transform(X_train)
+scaled_X_test = scaler.transform(X_test)
+scaled_X_train.max()
+scaled_X_train.min()
+
+# Building ANN model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+model = Sequential()
+model.add(Dense(4,activation='relu'))
+model.add(Dense(4,activation='relu'))
+model.add(Dense(4,activation='relu'))
+
+model.add(Dense(1))
+model.compile(optimizer='rmsprop', loss='mse')
+
+model.fit(x=scaled_X_train, y=y_train, epochs=250)
+
+loss_df = pd.DataFrame(model.history.history)
+loss_df.plot()
+    
+# Evaluate model loss
+model.evaluate(scaled_X_test, y_test)
+model.evaluate(scaled_X_train, y_train)
+
+# Predicting the model
+predictions = model.predict(scaled_X_test)
+
+# Evaluating predictions
+pred_df = pd.DataFrame(predictions, columns=['Predicted_value'])
+pred_df['Actual_value'] = y_test
+plt.scatter(x='Predicted_value', y='Actual_value',data=pred_df)
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+mean_absolute_error(pred_df['Actual_value'], pred_df['Predicted_value'])
+mean_squared_error(pred_df['Actual_value'], pred_df['Predicted_value'])**0.5
+
+# Testing new data
+new_data = [[998,1000]]
+new_data = scaler.transform(new_data)
+model.predict(new_data)
+
+# Saving and Loading model
+from tensorflow.keras.models import load_model
+model.save('my1st_model.h5')
+later_model = load_model('my1st_model.h5')
+later_model.predict(new_data)
