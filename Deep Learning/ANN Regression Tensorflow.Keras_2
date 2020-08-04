@@ -1,0 +1,94 @@
+#Python code
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+train = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/ANN/kc_house_data.csv')
+
+# Data Preprocessing
+# Data Analysis
+train.isnull().count()
+train.info()
+describe = train.describe(include='all').transpose()
+plt.scatter(x='price', y='bedrooms', data=train)
+sns.countplot(train['bedrooms'])
+train.corr()['price'].sort_values(ascending=False)
+plt.figure(figsize=(10,6))
+sns.scatterplot(train['price'],train['sqft_living'],hue=train['grade'])
+sns.boxplot(x='bedrooms',y='price',data=train)
+sns.boxplot(x=train['bedrooms'],y=train['price'])
+sns.scatterplot(train['long'],train['lat'],hue=train['price'])
+
+# Dropping outliers
+train.sort_values('price',ascending=False)
+len(train)*.01
+non_top_1percent = train.sort_values('price',ascending=False).iloc[267:]
+sns.scatterplot(non_top_1percent['long'],non_top_1percent['lat'],hue=non_top_1percent['price'])
+
+sns.boxplot(x='waterfront', y='price', data=non_top_1percent)
+sns.boxplot(x='waterfront', y='price', data=train)
+
+# Continue Data Preprocessing and Feature engineering
+train = train.drop('id',axis=1)
+train['date'] = pd.to_datetime(train['date'])
+train['year'] = train['date'].apply(lambda date: date.year)
+train['month'] = train['date'].apply(lambda date: date.month)
+sns.boxplot(x='month', y='price', data=train)
+train.groupby('month').mean()['price'].plot()
+train.groupby('year').mean()['price'].plot()
+
+# dropping unwanted features
+train = train.drop(['date','zipcode'], axis=1)
+
+# Splitting data train test
+X = train.drop('price', axis=1).values
+y = train['price'].values
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=101)
+
+# Standardizing Inputs
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+scaler.fit(X_train)
+scaled_X_train = scaler.transform(X_train)
+scaled_X_test = scaler.transform(X_test)
+scaled_X_train.max()
+scaled_X_train.min()
+
+# Building ANN model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+model = Sequential()
+model.add(Dense(19,activation='relu'))
+model.add(Dense(19,activation='relu'))
+model.add(Dense(19,activation='relu'))
+model.add(Dense(19,activation='relu'))
+
+model.add(Dense(1))
+model.compile(optimizer='Adam', loss='mse')
+
+model.fit(x=scaled_X_train, y=y_train, validation_data=(scaled_X_test,y_test),
+          batch_size=128, epochs=400)
+
+loss_df = pd.DataFrame(model.history.history)
+loss_df.plot()
+    
+# Evaluate model loss
+model.evaluate(scaled_X_test, y_test)
+model.evaluate(scaled_X_train, y_train)
+
+# Predicting the model
+predictions = model.predict(scaled_X_test)
+
+# Evaluating predictions
+pred_df = pd.DataFrame(predictions, columns=['Predicted_value'])
+pred_df['Actual_value'] = y_test
+plt.scatter(x='Predicted_value', y='Actual_value',data=pred_df)
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error, explained_variance_score
+mean_absolute_error(pred_df['Actual_value'], pred_df['Predicted_value'])
+mean_squared_error(pred_df['Actual_value'], pred_df['Predicted_value'])**0.5
+explained_variance_score(pred_df['Actual_value'], pred_df['Predicted_value']) #Rquare similar
