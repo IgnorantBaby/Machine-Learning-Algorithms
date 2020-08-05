@@ -1,0 +1,202 @@
+#Python code
+
+
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Data info
+data_info = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/ANN/lending_club_info.csv',index_col='LoanStatNew')
+def feat_info(col_name):
+    print(data_info.loc[col_name]['Description'])
+feat_info('mort_acc')    
+
+# Data loading
+df = pd.read_csv('C:/Users/YAQABIZO/Desktop/ML notes/ANN/lending_club_loan_two.csv')
+
+# Data PreProcessing and exploratory Data analysis
+# Exploratory Data analysis
+df.info()
+sns.countplot(x='loan_status', data=df)
+
+plt.figure(figsize=(12,6))
+sns.distplot(df['loan_amnt'], kde=False, bins=40)
+sns.heatmap(df.corr(), annot=True, cmap='viridis')
+
+sns.scatterplot(x='installment', y='loan_amnt', data=df)
+
+sns.boxplot(x='loan_status', y='loan_amnt', data=df)
+
+#stats for loan amnt groupby loan_status category
+df.groupby('loan_status')['loan_amnt'].describe() 
+
+df['grade'].unique()
+df['sub_grade'].unique()
+
+#checking relationship between categories
+sns.countplot(x='grade', data=df, hue='loan_status')
+plt.figure(figsize=(12,6))
+sub_grade_order = sorted(df['sub_grade'].unique()) 
+sns.countplot(x='sub_grade', data=df, hue='loan_status', order=sub_grade_order)
+
+#Conditional relationship between categories
+df_fnG = df[(df['grade']=='F') | (df['grade']=='G')] 
+plt.figure(figsize=(12,6))
+sub_grade_order = sorted(df_fnG['sub_grade'].unique()) 
+sns.countplot(x='sub_grade', data=df_fnG, hue='loan_status', order=sub_grade_order)
+
+#Creating new column for categorical binary column
+df['loan_repaid'] = df['loan_status'].map({'Fully Paid':1, 'Charged Off':0})
+
+#correlation between new binary categary column with all numerical Featuers
+df.corr()['loan_repaid'].drop('loan_repaid').sort_values().plot(kind='bar')
+
+# Data PreProcessing
+# Data PreProcessing: missing Data
+# checking for missing values
+len(df.isnull())
+df.isnull().sum()
+
+# Converting missing values in terms of percentage of total data
+100 * df.isnull().sum() / len(df)
+
+# Analysing missing Features/columns importance i.e whether keep it or not
+df['emp_title'].nunique()
+df['emp_title'].value_counts()
+df = df.drop('emp_title', axis=1)
+
+# Sorting missing values column
+sorted(df['emp_length'].dropna().unique())
+sorted_column = ['< 1 year','1 year','2 years', '3 years', '4 years','5 years','6 years',
+                 '7 years','8 years', '9 years' ,'10+ years']
+plt.figure(figsize=(12,6))
+sns.countplot(x='emp_length', data=df, order=sorted_column, hue='loan_status')
+
+# ratio between two classification categories
+el_fp = df[df['loan_status']=='Fully Paid'].groupby('emp_length').count()['loan_status']
+el_co = df[df['loan_status']=='Charged Off'].groupby('emp_length').count()['loan_status']
+em_len = el_co / (el_fp + el_co)
+em_len.plot(kind='bar')
+df = df.drop('emp_length', axis=1)
+
+df.isnull().sum()
+
+# Drop duplicate columns
+df = df.drop('title', axis=1)
+
+# Dealing / filling missing values
+df.corr()['mort_acc'].sort_values() # finding correlation between other features
+
+total_acc_avg = df.groupby('total_acc').mean()['mort_acc']
+def filling_mort(total_acc, mort_acc):
+    if np.isnan(mort_acc):
+        return total_acc_avg[total_acc]
+    else:
+        return mort_acc
+df['mort_acc']= df.apply(lambda x: filling_mort(x['total_acc'],x['mort_acc']), axis=1)
+df.isnull().sum()
+df = df.dropna()
+df.isnull().sum()
+
+# checking non numerical data types
+df.select_dtypes(['object']).columns
+
+# check if we keep it category or not
+sns.countplot(x='term', data=df, hue='loan_status') 
+
+# map or string manipulation
+df['term'] = df['term'].apply(lambda x: int(x[:3]))
+df = df.drop('grade', axis=1)
+
+# dealing with categorical Features/variables: dummy variable / one hot encoding
+dummies = pd.get_dummies(df['sub_grade'], drop_first=True)
+df = pd.concat([df.drop('sub_grade', axis=1), dummies], axis=1)
+
+# Other dummy variables
+dummies = pd.get_dummies(df[['verification_status', 'application_type',
+                             'initial_list_status', 'purpose']], drop_first=True)
+df = pd.concat([df.drop(['verification_status', 'application_type',
+                    'initial_list_status', 'purpose'], axis=1), dummies], axis=1)
+
+# replace / combine / map categorical values to another value
+df['home_ownership'].value_counts()
+df['home_ownership'] = df['home_ownership'].replace(['NONE', 'ANY'], 'OTHER') 
+
+dummies = pd.get_dummies(df['home_ownership'], drop_first=True)
+df = pd.concat([df.drop('home_ownership', axis=1), dummies], axis=1)
+
+# Extracting values from string
+df['zip_code'] = df['address'].apply(lambda x: x[-5:])
+df['zip_code'].value_counts()
+dummies = pd.get_dummies(df['zip_code'], drop_first=True)
+df = pd.concat([df.drop('zip_code', axis=1), dummies], axis=1)
+df = df.drop('address', axis=1)
+
+# drop Data leakage columns /  features
+df = df.drop('issue_d', axis=1)
+
+# Extracting date from string
+df['earliest_cr_line'] = df['earliest_cr_line'].apply(lambda x: int(x[-4:]))
+df['earliest_cr_line'].value_counts()
+
+# checking non numerical data types
+df.select_dtypes(['object']).columns
+df = df.drop('loan_status', axis=1)
+
+# Data PreProcessing: Splitting and Standardizing data
+
+# for big data ML sample
+#df_sample = df.sample(frac=0.1, random_state=101)
+print(len(df))
+
+from sklearn.model_selection import train_test_split
+X = df.drop('loan_repaid', axis=1).values
+y = df['loan_repaid'].values
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=101)
+
+# Standardization the Features / variables
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Creating the Model
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dropout, Dense
+
+model = Sequential()
+
+model.add(Dense(78, activation='relu'))
+model.add(Dropout(0.2))
+
+model.add(Dense(39, activation='relu'))
+model.add(Dropout(0.2))
+
+model.add(Dense(19, activation='relu'))
+model.add(Dropout(0.2))
+
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(optimizer= 'adam', loss='binary_crossentropy')
+
+model.fit(x= X_train, y=y_train, epochs=25, batch_size=256, 
+          validation_data=(X_test, y_test))
+
+# Saving and loading model
+from tensorflow.keras.models import load_model
+model.save('My_Project_model.h5')
+
+# Evaluating Model
+loss_df = pd.DataFrame(model.history.history)
+loss_df.plot()
+
+# Predicting the model
+predictions = model.predict_classes(X_test)
+
+# Classification report
+from sklearn.metrics import classification_report, confusion_matrix
+print(classification_report(y_test, predictions)) 
+print(confusion_matrix(y_test, predictions))
