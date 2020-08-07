@@ -1,0 +1,155 @@
+#Python code
+
+
+
+import os
+data_dir = 'C:/Users/YAQABIZO/Desktop/ML notes/CNN/cell_images'
+os.listdir(data_dir)
+
+train_path = data_dir+'/train/'
+test_path = data_dir+'/test/'
+
+
+# import Libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Read Image Library
+from matplotlib.image import imread
+
+os.listdir(train_path) #['parasitized', 'uninfected']
+os.listdir(train_path+'/parasitized/')[0]
+plt.imshow(imread(train_path + '/parasitized/' +os.listdir(train_path+'/parasitized/')[0]))
+complete_sample_link = 'C:/Users/YAQABIZO/Desktop/ML notes/CNN/cell_images/train//parasitized/C100P61ThinF_IMG_20150918_144104_cell_162.png'
+plt.imshow(imread(complete_sample_link))
+
+# Extracting image dimensions
+dim1 = []
+dim2 = []
+for img_name in os.listdir(train_path+'/uninfected/'):
+    img = imread(train_path + '/uninfected/' + img_name)
+    d1,d2,color = img.shape
+    dim1.append(d1)
+    dim2.append(d2)
+
+sns.jointplot(dim1,dim2)
+np.mean(dim1)
+np.mean(dim2)
+
+# final image dimentions
+image_shape = (130,130,3)
+
+# image data generator to improve the model performance
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+image_gen = ImageDataGenerator(rotation_range=(20), 
+                               width_shift_range=0.1, 
+                               height_shift_range=0.1,
+                               shear_range=(0.1),
+                               zoom_range=0.1,
+                               horizontal_flip=True,
+                               fill_mode='nearest',
+                               rescale=1) #rescale img to values between 1-0
+plt.imshow(imread(complete_sample_link))
+plt.imshow(image_gen.random_transform(imread(complete_sample_link)))
+
+# image flow directory and classifying folder * separate folder for each class 
+image_gen.flow_from_directory(train_path)
+image_gen.flow_from_directory(test_path)
+
+# Creating CNN model
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, MaxPool2D, Dropout, Flatten
+
+model = Sequential()
+
+# Convolutional Layer # Pooling Layer
+model.add(Conv2D(filters=32, kernel_size=(3,3), strides=(1,1), padding='valid', activation='relu', input_shape=image_shape))
+model.add(MaxPool2D(pool_size=(2,2)))
+
+model.add(Conv2D(filters=64, kernel_size=(3,3), strides=(1,1), padding='valid', activation='relu', input_shape=image_shape))
+model.add(MaxPool2D(pool_size=(2,2)))
+
+model.add(Conv2D(filters=64, kernel_size=(3,3), strides=(1,1), padding='valid', activation='relu', input_shape=image_shape))
+model.add(MaxPool2D(pool_size=(2,2)))
+
+# Flatten out Conv. layers 
+model.add(Flatten())
+
+# Typical ANN and Dropout layer
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+
+# Output layer sigmoid activation function for binary-layer
+model.add(Dense(1, activation='sigmoid'))
+
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Check model summary
+model.summary()
+
+# EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping
+early_stop = EarlyStopping(monitor='val_loss', patience=2, mode='min')
+
+# batch size
+batch_size = 32
+
+# setting up directory for model.fit
+train_image_gen = image_gen.flow_from_directory(train_path, image_shape[:2],
+                                                color_mode='rgb',
+                                                batch_size=batch_size,
+                                                class_mode='binary')
+test_image_gen = image_gen.flow_from_directory(test_path, image_shape[:2],
+                                                color_mode='rgb',
+                                                batch_size=batch_size,
+                                                class_mode='binary',
+                                                shuffle=False) #Shuffle = False for running on test data
+
+# checking image_gen indices
+train_image_gen.class_indices
+
+# fitting the model
+results = model.fit_generator(train_image_gen, epochs=3,
+                              validation_data=(test_image_gen),
+                              callbacks = [early_stop])
+
+# loading the model
+from tensorflow.keras.models import load_model
+new_model = load_model(filepath= 'C:/Users/YAQABIZO/Desktop/ML notes/CNN/malaria_detector.h5')
+
+# evaluate trained model
+new_model.evaluate(test_image_gen)
+new_model.metrics_names
+
+# predict model
+pred = new_model.predict_generator(test_image_gen)
+predictions = pred > 0.5
+
+# Classification report
+from sklearn.metrics import classification_report, confusion_matrix
+print(classification_report(test_image_gen.classes , predictions)) 
+print(confusion_matrix(test_image_gen.classes, predictions))
+plt.figure(figsize=(10,6))
+sns.heatmap(confusion_matrix(test_image_gen.classes, predictions), annot=True)
+
+my_number = test_image_gen.classes[0]
+plt.imshow(my_number.reshape(image_shape))
+
+# predicting new Data
+# num_images, width, height, color_channels
+complete_sample_link # single image link
+from tensorflow.keras.preprocessing import image
+my_image = image.load_img(complete_sample_link, target_size=image_shape)
+
+# convert image to array
+image_arr = image.img_to_array(my_image)
+image_arr.shape
+
+# reshape the image dimensions
+image_arr = np.expand_dims(image_arr, axis=0)
+image_arr.shape
+
+new_model.predict_classes(image_arr)
+new_model.predict(image_arr)
